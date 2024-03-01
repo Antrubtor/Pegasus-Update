@@ -11,6 +11,7 @@ pip install beautifulsoup4
 ```
 
 ## Usage
+For now Pegasus Update works with selenium because this method only works for 24 hours:
 
 1. Begin by obtaining the URL for Pegasus using these steps:
    - Open your browser.
