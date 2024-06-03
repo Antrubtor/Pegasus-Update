@@ -1,13 +1,30 @@
 import os
+import sys
 import json
 import requests
 from bs4 import BeautifulSoup
 
-def get_html(auth_url):
-    session = requests.Session()
-    response = session.get(auth_url)
-    response_new = session.get('https://prepa-epita.helvetius.net/pegasus/index.php?com=extract&job=extract-notes')
-    return response_new.text
+def get_html(ESTSAUTHPERSISTENT, discord_webhook):
+    try:
+        session = requests.Session()
+        response = session.get("https://prepa-epita.helvetius.net/pegasus/index.php")
+        cookies = response.cookies.get_dict()
+        phpsessid = cookies.get('PHPSESSID')
+        response = session.get('https://prepa-epita.helvetius.net/pegasus/o365Auth.php', allow_redirects=False)
+        response = session.get(response.headers.get("Location"), allow_redirects=False)
+        cookies = {
+            'ESTSAUTHPERSISTENT': ESTSAUTHPERSISTENT
+        }
+        response = session.get(response.headers.get("Location"), cookies=cookies, allow_redirects=False)
+        response = session.get(response.headers.get("Location"), allow_redirects=False)
+        location = response.headers.get("Location")
+        response = session.get(f"https://prepa-epita.helvetius.net/pegasus/{location}")
+        response = session.get('https://prepa-epita.helvetius.net/pegasus/index.php?com=extract&job=extract-notes')
+        print("Page loaded")
+        return response.text
+    except:
+        send_webhook_custom(discord_webhook, "Unable to retrieve Pegasus web page, cookie may have expired.", 15548997)
+        sys.exit(0)
 
 
 def parse_to_dict(file_html):
@@ -41,6 +58,7 @@ def differences(dict1, dict2):  # dict2 is new dict
     embed_field_list = []
 
     diff = "/".join(set(list(dict1)).symmetric_difference(set(list(dict2.keys()))))[0:1023]
+    print(diff)
     if diff != "":
         embed_field_list.append({
             "name": "Added Categories",
@@ -96,7 +114,6 @@ def send_webhook(embed_field_list, WEBHOOK_URL):
         color = 16711680
 
     embeds_list = [embed_field_list[i:i + 24] for i in range(0, len(embed_field_list), 24)]     # max embed field
-
     embeds = []
     for emb in embeds_list: # make embeds bloc
         embeds.append({
@@ -108,17 +125,17 @@ def send_webhook(embed_field_list, WEBHOOK_URL):
                         }
         })
     data = {
-        "content": "@everyone",
+        "content": "@oui", ##TODO: remettre @everyone
         "embeds": embeds[:9],
         "avatar_url": "https://prepa-epita.helvetius.net/pegasus/assets/images/pegasus/medium-logo-pegasus-entete.png",
     }
     send(data, WEBHOOK_URL)
 
-def send_webhook_empty(WEBHOOK_URL):
-    print("No new notes")
+def send_webhook_custom(WEBHOOK_URL, text, color):
+    print(text)
     embed = {
-        "title": "No new notes",
-        "color": 0,
+        "title": text,
+        "color": color,
         "author": {
             "name": "Pegasus update",
             "icon_url": "https://epita-etu.helvetius.net/pegasus/assets/images/pegasus/medium-logo-pegasus.png"
@@ -143,52 +160,32 @@ def send(data, WEBHOOK_URL):
         print(f"Not sent with {result.status_code}, response:\n{result.json()}")
 
 def main():
-    if os.path.isfile("tokens.json") and os.path.isfile("pegasus.txt"):
+    if os.path.isfile("tokens.json") and os.path.isfile("pegasus.html"):
         with open('tokens.json', 'r') as json_file:
             tokens_data = json.load(json_file)
 
         discord_webhook = tokens_data['discord_webhook']
-        pegasus_url = tokens_data['pegasus_url']
+        ESTSAUTHPERSISTENT_cookie = tokens_data['ESTSAUTHPERSISTENT_cookie']
 
-        with open("pegasus.txt", 'r', encoding='utf-8') as file:
+        with open("pegasus.html", 'r', encoding='utf-8') as file:
             file1_html = file.read()
         print("Getting HTML...")
-        file2_html = get_html(pegasus_url)
+        file2_html = get_html(ESTSAUTHPERSISTENT_cookie, discord_webhook)
 
-        if file1_html == file2_html:    # If nothing has changed
-            send_webhook_empty(discord_webhook)
+        if file1_html == file2_html:  # If nothing has changed
+            send_webhook_custom(discord_webhook, "No new grade", 0)
         else:
             dict_1 = parse_to_dict(file1_html)  # old
             dict_2 = parse_to_dict(file2_html)  # new
             embed_field_list = differences(dict_1, dict_2)
             send_webhook(embed_field_list, discord_webhook)
-            with open("pegasus.txt", 'w', encoding='utf-8') as file:
+            with open("pegasus.html", 'w', encoding='utf-8') as file:
                 file.write(file2_html)
             print("HTML saved")
             print("exit...")
 
     else:   # first opening
-        pegasus_url = ""
-        while "https://prepa-epita.helvetius.net/pegasus/gfront-controller.php?com=" not in pegasus_url:
-            pegasus_url = str(input("Give your Pegasus url: "))
-
-        webhook_url = ""
-        while "https://discord.com/api/webhooks/" not in webhook_url:
-            webhook_url = str(input("Give your webhook url: "))
-
-        data = {
-            "discord_webhook": webhook_url,
-            "pegasus_url": pegasus_url
-        }
-        with open('tokens.json', 'w') as json_file: # fill json file with tokens
-            json.dump(data, json_file)
-        print("The tokens have been saved successfully")
-
-        with open("pegasus.txt", 'w', encoding='utf-8') as file:    # fill pegasus.txt for the first time
-            file.write(get_html(pegasus_url))
-        print("The pegasus HTML page has been saved successfully")
-
-        print("Please restart the program...")
+        print("Start \"setup.py\" before launching this file.")
 
 if __name__ == "__main__":
     main()

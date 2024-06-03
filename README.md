@@ -1,6 +1,6 @@
 # EPITA Pegasus Discord Notifications
 
-This project allows you to have notifications on discord when you have new notes on pegasus, the EPITA notes system.
+This project allows you to have notifications on Discord when you have new notes on pegasus, the EPITA notes system.
 
 ## Installation
 
@@ -10,20 +10,18 @@ To get started, ensure you have BeautifulSoup installed. Use the following comma
 pip install beautifulsoup4
 ```
 
+
+To facilitate the initialization of the program you can install browser-cookie3 but this is not a mandatory.
+
+```bash
+pip install browser-cookie3
+```
+
 ## Usage
-For now Pegasus Update works with selenium because this method only works for 24 hours:
 
-1. Begin by obtaining the URL for Pegasus using these steps:
-   - Open your browser.
-   - Access Pegasus.
-   - Click on 'Logout' at the top right.
-   - Press F12 (for the inspect tool).
-   - Go to the 'Network' tab.
-   - Click the button on the page: 'Sign in with Office 365.'
-   - Once loaded, use the search function in the network tab and look for `gfront-controller.php`.
-   - Find a request result starting with `https://prepa-epita.helvetius.net/pegasus/gfront-controller.php`.
-
-2. If everything works correctly, you can execute the code using the Windows Task Scheduler every hour to stay updated (a .bat file is provided).
+1. First run "setup.py" to create the files (tokens.json / pegasus.html) necessary for "pegasus_update.py" to work.
+2. Then try to run the pegasus_update.py script, you should receive "No new grade" with your Discord webhook.
+3. If everything works correctly you can now place the repository files on your VPS to run it in a loop (every 30 minutes for example).
 
 ## Contributing
 
