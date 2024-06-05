@@ -125,7 +125,7 @@ def send_webhook(embed_field_list, WEBHOOK_URL):
                         }
         })
     data = {
-        "content": "@oui", ##TODO: remettre @everyone
+        "content": "@everyone",
         "embeds": embeds[:9],
         "avatar_url": "https://prepa-epita.helvetius.net/pegasus/assets/images/pegasus/medium-logo-pegasus-entete.png",
     }
